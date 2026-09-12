@@ -29,7 +29,7 @@ void main() {
   setUpAll(() async {
     await Supabase.initialize(
       url: 'http://localhost:54321',
-      anonKey: 'test-anon-key',
+      publishableKey: 'test-anon-key',
     );
   });
 

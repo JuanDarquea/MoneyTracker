@@ -10,6 +10,6 @@ final supabaseClientProvider = Provider<SupabaseClient>((ref) {
 Future<void> initSupabase() async {
   await Supabase.initialize(
     url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
+    publishableKey: Env.supabaseAnonKey,
   );
 }
