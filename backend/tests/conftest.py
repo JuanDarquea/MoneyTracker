@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.db.session import get_db
 from app.main import app
 from app.models import Category, CategoryType
 
@@ -16,8 +19,30 @@ TestSessionLocal = sessionmaker(bind=test_engine)
 
 
 @pytest.fixture()
-def client() -> TestClient:
-    return TestClient(app)
+def client(db: Session) -> TestClient:
+    app.dependency_overrides[get_db] = lambda: db
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def user_id() -> uuid.UUID:
+    return uuid.uuid4()
+
+
+@pytest.fixture()
+def auth_headers(user_id: uuid.UUID) -> dict[str, str]:
+    settings = get_settings()
+    token = jwt.encode(
+        {
+            "sub": str(user_id),
+            "aud": settings.supabase_jwt_aud,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        },
+        settings.supabase_jwt_secret,
+        algorithm="HS256",
+    )
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture()
