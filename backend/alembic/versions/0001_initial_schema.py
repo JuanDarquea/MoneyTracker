@@ -71,7 +71,17 @@ def upgrade() -> None:
     op.bulk_insert(
         categories_table,
         [
-            {"id": uuid.uuid4(), "name": name, "type": cat_type, "is_essential": essential}
+            {
+                # Deterministic (not random) so the seeded category ids are
+                # stable/reproducible across any fresh migration run (dev,
+                # test, or a real Supabase project) — the frontend's M1
+                # stopgap hardcodes these same ids until M2 adds a real
+                # category-fetch endpoint.
+                "id": uuid.uuid5(uuid.NAMESPACE_DNS, f"moneytracker.category.{name.lower()}"),
+                "name": name,
+                "type": cat_type,
+                "is_essential": essential,
+            }
             for name, cat_type, essential in DEFAULT_CATEGORIES
         ],
     )

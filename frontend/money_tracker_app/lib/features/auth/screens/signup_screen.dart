@@ -16,7 +16,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
+    final authState = ref.watch(signupControllerProvider);
+
+    ref.listen(signupControllerProvider, (previous, next) {
+      if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created — check your email to confirm, then log in'),
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sign up')),
@@ -51,7 +62,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               key: const Key('signup_button'),
               onPressed: authState.isLoading
                   ? null
-                  : () => ref.read(authControllerProvider.notifier).signUp(
+                  : () => ref.read(signupControllerProvider.notifier).signUp(
                         _emailController.text,
                         _passwordController.text,
                       ),

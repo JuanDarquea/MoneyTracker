@@ -8,8 +8,13 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://moneytracker:moneytracker@localhost:5433/moneytracker"
     test_database_url: str = "postgresql+psycopg://moneytracker:moneytracker@localhost:5433/moneytracker_test"
-    supabase_jwt_secret: str = "dev-only-change-me"
+    supabase_jwt_secret: str  # no default — fail fast if unset
     supabase_jwt_aud: str = "authenticated"
+    cors_allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://localhost:5000",
+    ]
 
 
 @lru_cache

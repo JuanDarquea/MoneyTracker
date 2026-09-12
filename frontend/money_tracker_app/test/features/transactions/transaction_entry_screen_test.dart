@@ -43,6 +43,7 @@ void main() {
     expect(find.byKey(const Key('amount_field')), findsOneWidget);
     expect(find.byKey(const Key('type_toggle')), findsOneWidget);
     expect(find.byKey(const Key('category_dropdown')), findsOneWidget);
+    expect(find.byKey(const Key('date_field')), findsOneWidget);
     expect(find.byKey(const Key('note_field')), findsOneWidget);
     expect(find.byKey(const Key('submit_button')), findsOneWidget);
   });
