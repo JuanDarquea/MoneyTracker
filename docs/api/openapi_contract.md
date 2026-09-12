@@ -8,6 +8,8 @@ Machine-readable schema: `docs/api/openapi.json` (regenerate with
 Every endpoint below requires `Authorization: Bearer <supabase-jwt>`.
 Missing/invalid/expired token → `401`.
 
+*Note: The OpenAPI schema marks the `Authorization` header as optional for technical reasons (to return a cleaner 401 rather than 422 when missing), but it is enforced at runtime — Frontend must always send it.*
+
 ## `POST /api/v1/transactions`
 
 Request body:
@@ -22,20 +24,22 @@ Request body:
 ```
 `amount` is a decimal string, positive, at most 2 decimal places.
 Response `201`: `TransactionRead` (adds `id`, `user_id`, `created_at`, `updated_at`).
+`422` if request body is invalid/malformed (Pydantic validation error).
 
 ## `GET /api/v1/transactions`
 
 Response `200`: array of `TransactionRead`, scoped to the caller, newest `occurred_on` first.
 
-## `GET /api/v1/transactions/{id}`
+## `GET /api/v1/transactions/{transaction_id}`
 
 Response `200`: `TransactionRead`. `404` if not found or not owned by caller.
 
-## `PATCH /api/v1/transactions/{id}`
+## `PATCH /api/v1/transactions/{transaction_id}`
 
 Request body: any subset of the `POST` fields. Response `200`: updated `TransactionRead`.
+`422` if request body is invalid/malformed (Pydantic validation error).
 
-## `DELETE /api/v1/transactions/{id}`
+## `DELETE /api/v1/transactions/{transaction_id}`
 
 Response `204`.
 
