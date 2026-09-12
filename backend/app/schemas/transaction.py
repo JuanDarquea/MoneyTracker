@@ -1,0 +1,45 @@
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
+
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.models import TransactionType
+
+
+class TransactionBase(BaseModel):
+    category_id: uuid.UUID
+    type: TransactionType
+    amount: Decimal
+    occurred_on: date
+    note: str | None = None
+
+    @field_validator("amount")
+    @classmethod
+    def amount_is_positive_with_two_decimals(cls, value: Decimal) -> Decimal:
+        if value <= 0:
+            raise ValueError("amount must be greater than zero")
+        if value.as_tuple().exponent < -2:
+            raise ValueError("amount must have at most 2 decimal places")
+        return value
+
+
+class TransactionCreate(TransactionBase):
+    pass
+
+
+class TransactionUpdate(BaseModel):
+    category_id: uuid.UUID | None = None
+    type: TransactionType | None = None
+    amount: Decimal | None = None
+    occurred_on: date | None = None
+    note: str | None = None
+
+
+class TransactionRead(TransactionBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
