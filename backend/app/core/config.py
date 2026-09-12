@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://moneytracker:moneytracker@localhost:5433/moneytracker"
+    test_database_url: str = "postgresql+psycopg://moneytracker:moneytracker@localhost:5433/moneytracker_test"
     supabase_jwt_secret: str = "dev-only-change-me"
     supabase_jwt_aud: str = "authenticated"
 

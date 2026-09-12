@@ -11,7 +11,7 @@ from app.db.base import Base
 from app.main import app
 from app.models import Category, CategoryType
 
-test_engine = create_engine(get_settings().database_url)
+test_engine = create_engine(get_settings().test_database_url)
 TestSessionLocal = sessionmaker(bind=test_engine)
 
 
