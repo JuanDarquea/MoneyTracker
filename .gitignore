@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Env / secrets
+.env
+*.env.local
+
+# Flutter/Dart
+frontend/money_tracker_app/.dart_tool/
+frontend/money_tracker_app/.flutter-plugins
+frontend/money_tracker_app/.flutter-plugins-dependencies
+frontend/money_tracker_app/build/
+frontend/money_tracker_app/.pub-cache/
+frontend/money_tracker_app/**/generated_plugin_registrant.dart
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
