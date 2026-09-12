@@ -21,3 +21,6 @@ frontend/money_tracker_app/**/generated_plugin_registrant.dart
 .vscode/
 .idea/
 .DS_Store
+
+# Local Claude Code dev-server launch config (machine-specific, not shared)
+.claude/launch.json
