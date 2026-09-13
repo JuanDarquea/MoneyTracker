@@ -24,3 +24,6 @@ frontend/money_tracker_app/**/generated_plugin_registrant.dart
 
 # Local Claude Code dev-server launch config (machine-specific, not shared)
 .claude/launch.json
+
+# Local progress/checklist notes (not shared, may reference secrets/state)
+PROGRESS.local.md
