@@ -118,3 +118,28 @@ def test_decode_es256_token_with_wrong_key_raises(monkeypatch):
 
     with pytest.raises(InvalidTokenError):
         decode_supabase_jwt(token)
+
+
+def test_decode_es256_token_raises_cleanly_when_jwks_lookup_fails(monkeypatch):
+    # Regression test: a misconfigured/unreachable JWKS endpoint (e.g.
+    # SUPABASE_URL unset, producing "unknown url type" from urllib) must
+    # surface as InvalidTokenError, not propagate as an unhandled exception
+    # that FastAPI turns into a 500 with no CORS headers.
+    token = jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "aud": "authenticated",
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        },
+        ec.generate_private_key(ec.SECP256R1()),
+        algorithm="ES256",
+        headers={"kid": "test-kid"},
+    )
+
+    def _broken_jwks_client():
+        raise ValueError("unknown url type: '/auth/v1/.well-known/jwks.json'")
+
+    monkeypatch.setattr(security, "_jwks_client", _broken_jwks_client)
+
+    with pytest.raises(InvalidTokenError):
+        decode_supabase_jwt(token)

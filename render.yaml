@@ -1,15 +1,23 @@
 services:
   - type: web
     name: moneytracker-backend
-    env: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
+    # Native Python runtime — this Render account/plan has no Docker
+    # environment option, so backend/Dockerfile is kept only for local
+    # `docker build`/docker-compose use, not for this deployment.
+    env: python
+    rootDir: backend
     plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     autoDeploy: true
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
       - key: DATABASE_URL
         sync: false
+      - key: SUPABASE_URL
+        value: https://obcdryzanpsocsurqatv.supabase.co
       - key: SUPABASE_JWT_SECRET
         sync: false
       - key: SUPABASE_JWT_AUD

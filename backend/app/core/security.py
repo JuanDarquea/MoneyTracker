@@ -43,3 +43,11 @@ def decode_supabase_jwt(token: str) -> dict:
         )
     except jwt.PyJWTError as exc:
         raise InvalidTokenError(str(exc)) from exc
+    except Exception as exc:
+        # Anything else (bad JWKS URL/config, network failure reaching
+        # Supabase, malformed key, etc.) should still surface to the client
+        # as a clean 401 — not an unhandled 500. Starlette's error handling
+        # sits outside CORSMiddleware, so an uncaught exception here comes
+        # back to the browser with no CORS headers at all, which looks like
+        # a CORS failure instead of the real cause.
+        raise InvalidTokenError(str(exc)) from exc
