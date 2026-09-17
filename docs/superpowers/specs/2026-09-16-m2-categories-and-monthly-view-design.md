@@ -199,6 +199,17 @@ pattern as M1):
 - `TransactionEntryScreen`: existing test updated for the category source
   moving from the hardcoded map to the (faked) provider.
 
+**Manual click-through** (in addition to automated tests, not instead of):
+after each major feature lands — category CRUD, the transaction
+ownership fix, the summary endpoint, the dashboard screen, the category
+screens — click through it live in the browser (real login, real backend,
+real Supabase project) before moving to the next feature, the same way M1
+and the Render deploy were verified. Automated tests prove the logic;
+clicking through proves the feature actually works end to end for a real
+user. Catches integration issues automated tests miss — the Render
+`SUPABASE_URL` bug during M1 verification is a concrete example of a class
+of bug this step catches and pure unit/API tests don't.
+
 ## Out of scope for M2
 
 - Month-over-month / 3-month-average comparisons (M3, budget engine).
