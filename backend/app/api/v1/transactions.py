@@ -18,8 +18,14 @@ def create_transaction(
     db: Session = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ):
-    if categories_service.get_category(db, user_id, payload.category_id) is None:
+    category = categories_service.get_category(db, user_id, payload.category_id)
+    if category is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    if payload.type != category.type:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Transaction type must match the category's type",
+        )
     return transactions_service.create_transaction(db, user_id, payload)
 
 
@@ -53,8 +59,27 @@ def update_transaction(
     txn = transactions_service.get_transaction(db, user_id, transaction_id)
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
-    if payload.category_id is not None and categories_service.get_category(db, user_id, payload.category_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    if payload.category_id is not None:
+        # category_id is changing (type may or may not be changing alongside it):
+        # validate the *new* category against whichever type will end up in effect.
+        category = categories_service.get_category(db, user_id, payload.category_id)
+        if category is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+        effective_type = payload.type if payload.type is not None else txn.type
+        if effective_type != category.type:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Transaction type must match the category's type",
+            )
+    elif payload.type is not None:
+        # type is changing but category_id is not: validate the new type against the
+        # transaction's existing category.
+        category = categories_service.get_category(db, user_id, txn.category_id)
+        if category is not None and payload.type != category.type:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Transaction type must match the category's type",
+            )
     return transactions_service.update_transaction(db, txn, payload)
 
 

@@ -208,3 +208,89 @@ def test_transactions_are_isolated_between_users(client, auth_headers, seeded_ca
     user_b_get = client.get(f"/api/v1/transactions/{user_b_transaction['id']}", headers=user_b_headers)
     assert user_b_get.status_code == 200
     assert user_b_get.json()["amount"] == "99.00"
+
+
+def test_create_transaction_rejects_type_category_mismatch(client, auth_headers, seeded_category):
+    """seeded_category is an expense category; declaring the transaction as income must be rejected."""
+    response = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "income",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_update_transaction_type_alone_rejects_mismatch_with_existing_category(
+    client, auth_headers, seeded_category
+):
+    """Changing only `type` on a transaction must be validated against its current category."""
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"type": "income"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_update_transaction_category_id_alone_rejects_mismatch_with_existing_type(
+    client, auth_headers, seeded_category, seeded_income_category
+):
+    """Changing only `category_id` on a transaction must be validated against its current type."""
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"category_id": str(seeded_income_category.id)},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_update_transaction_category_and_type_together_allows_consistent_pair(
+    client, auth_headers, seeded_category, seeded_income_category
+):
+    """Changing category_id and type together to a consistent income pair should succeed."""
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"category_id": str(seeded_income_category.id), "type": "income"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["type"] == "income"
+    assert response.json()["category_id"] == str(seeded_income_category.id)
