@@ -120,9 +120,43 @@ def test_delete_transaction(client, auth_headers, seeded_category):
     assert get_response.status_code == 404
 
 
-def test_transactions_are_isolated_between_users(client, auth_headers, seeded_category):
+def test_create_transaction_rejects_other_users_category(client, auth_headers, other_user_category):
+    response = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(other_user_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_update_transaction_rejects_other_users_category(client, auth_headers, seeded_category, other_user_category):
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"category_id": str(other_user_category.id)},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_transactions_are_isolated_between_users(client, auth_headers, seeded_category, other_user_id, other_user_category):
     """Two real, independently-authenticated users must never see or touch each other's data."""
-    user_b_headers = _auth_headers_for(uuid.uuid4())
+    user_b_headers = _auth_headers_for(other_user_id)
 
     user_a_transaction = client.post(
         "/api/v1/transactions",
@@ -139,7 +173,7 @@ def test_transactions_are_isolated_between_users(client, auth_headers, seeded_ca
     user_b_transaction = client.post(
         "/api/v1/transactions",
         json={
-            "category_id": str(seeded_category.id),
+            "category_id": str(other_user_category.id),
             "type": "expense",
             "amount": "99.00",
             "occurred_on": "2026-09-03",

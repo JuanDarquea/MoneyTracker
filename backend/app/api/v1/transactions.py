@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
 from app.schemas.transaction import TransactionCreate, TransactionRead, TransactionUpdate
+from app.services import categories as categories_service
 from app.services import transactions as transactions_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -17,6 +18,8 @@ def create_transaction(
     db: Session = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ):
+    if categories_service.get_category(db, user_id, payload.category_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
     return transactions_service.create_transaction(db, user_id, payload)
 
 
@@ -50,6 +53,8 @@ def update_transaction(
     txn = transactions_service.get_transaction(db, user_id, transaction_id)
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    if payload.category_id is not None and categories_service.get_category(db, user_id, payload.category_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
     return transactions_service.update_transaction(db, txn, payload)
 
 

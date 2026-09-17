@@ -70,3 +70,23 @@ def seeded_category(db: Session, user_id: uuid.UUID) -> Category:
     db.commit()
     db.refresh(category)
     return category
+
+
+@pytest.fixture()
+def other_user_id() -> uuid.UUID:
+    return uuid.uuid4()
+
+
+@pytest.fixture()
+def other_user_category(db: Session, other_user_id: uuid.UUID) -> Category:
+    category = Category(
+        id=uuid.uuid4(),
+        user_id=other_user_id,
+        name="Rent",
+        type=CategoryType.EXPENSE,
+        is_essential=True,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
