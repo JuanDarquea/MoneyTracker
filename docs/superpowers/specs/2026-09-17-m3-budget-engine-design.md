@@ -96,7 +96,10 @@ UI on top of that corrected model.
 - **New table `budgets`**: `id`, `user_id UUID NOT NULL`,
   `category_id UUID NOT NULL`, `is_essential BOOLEAN NOT NULL`,
   `amount NUMERIC NOT NULL`,
-  `source TEXT NOT NULL` (`'cold_start' | 'computed' | 'manual'`),
+  `source TEXT NOT NULL` (`'computed' | 'manual'` — a user-typed amount is
+  always `'manual'` whether it's a cold-start entry or an override of a
+  computed line; there's no separate `'cold_start'` value since nothing
+  ever writes one, per the `PUT /budget/lines` behavior below),
   `updated_at`. Unique on `(user_id, category_id, is_essential)`.
   `source` is provenance for display only ("you set this" vs. "computed
   from your history") — it doesn't change how the line behaves once set.
