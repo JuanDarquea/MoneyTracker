@@ -62,6 +62,12 @@ and `PYTHON_VERSION` are plain (non-secret) values already in `render.yaml`.
 Free-tier note: the service spins down after ~15 minutes idle; the first
 request after that takes tens of seconds to wake it back up.
 
+Migrations note: this Render plan has no pre-deploy command hook, so a new
+Alembic migration is not applied automatically on push. When a change adds
+a migration, run `alembic upgrade head` by hand against the Supabase
+database (using its connection string as `DATABASE_URL`), either just
+before or right after pushing the deploy — don't rely on Render to do it.
+
 ## Frontend (Flutter)
 
     cd frontend/money_tracker_app
