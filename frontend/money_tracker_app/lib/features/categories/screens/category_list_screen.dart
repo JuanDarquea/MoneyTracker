@@ -12,6 +12,14 @@ class CategoryListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoryListProvider);
 
+    ref.listen(categoryControllerProvider, (previous, next) {
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update category: ${next.error}')),
+        );
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Categories')),
       body: categoriesAsync.when(

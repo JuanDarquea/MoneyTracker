@@ -133,7 +133,12 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
 
   void _submit() {
     final categoryId = _categoryId;
-    if (categoryId == null) return;
+    if (categoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No category available for this type')),
+      );
+      return;
+    }
     final draft = TransactionDraft(
       categoryId: categoryId,
       type: _type,

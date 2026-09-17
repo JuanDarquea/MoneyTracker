@@ -62,4 +62,21 @@ void main() {
 
     expect(find.text('Salary'), findsOneWidget);
   });
+
+  testWidgets(
+      'Submitting with no category available for the selected type shows feedback instead of doing nothing',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [categoryListProvider.overrideWith((ref) async => <Category>[])],
+        child: const MaterialApp(home: TransactionEntryScreen()),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('submit_button')));
+    await tester.pump();
+
+    expect(find.text('No category available for this type'), findsOneWidget);
+  });
 }
