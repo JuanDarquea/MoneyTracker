@@ -6,10 +6,11 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Budget, BudgetSource, CategoryType, IncomeTarget, Transaction
-from app.schemas.budget import BudgetLineSet, IncomeTargetSet, SuggestionItem
+from app.models import Budget, BudgetSource, CategoryType, IncomeTarget, Transaction, TransactionType
+from app.schemas.budget import BudgetLineRead, BudgetLineSet, BudgetState, IncomeTargetSet, SuggestionItem
 from app.services import categories as categories_service
 from app.services.budget_engine import compute_suggested_amount
+from app.services.date_utils import month_bounds
 
 
 def get_income_target(db: Session, user_id: uuid.UUID) -> IncomeTarget | None:
@@ -146,3 +147,106 @@ def accept_suggestion(
     db.commit()
     db.refresh(line)
     return line
+
+
+def get_budget_state(db: Session, user_id: uuid.UUID, month: str) -> BudgetState:
+    start, end = month_bounds(month)
+    today = date.today()
+
+    income_target = get_income_target(db, user_id)
+    income_target_amount = income_target.amount if income_target is not None else None
+
+    actual_income_this_month = db.scalar(
+        select(func.sum(Transaction.amount)).where(
+            Transaction.user_id == user_id,
+            Transaction.type == TransactionType.INCOME,
+            Transaction.occurred_on >= start,
+            Transaction.occurred_on <= end,
+        )
+    ) or Decimal("0.00")
+
+    # Every (category_id, is_essential) pair with a saved budget or any
+    # transaction history (any month, not just the requested one) is shown.
+    budget_rows = {
+        (row.category_id, row.is_essential): row for row in db.scalars(select(Budget).where(Budget.user_id == user_id))
+    }
+    tagged_pairs = set(budget_rows.keys())
+    history_pairs = db.execute(
+        select(Transaction.category_id, Transaction.is_essential)
+        .where(Transaction.user_id == user_id, Transaction.is_essential.is_not(None))
+        .distinct()
+    ).all()
+    tagged_pairs.update((row.category_id, row.is_essential) for row in history_pairs)
+
+    categories_by_id = {c.id: c for c in categories_service.list_categories(db, user_id, include_archived=True)}
+
+    lines: list[BudgetLineRead] = []
+    essentials_budget_total = Decimal("0.00")
+    discretionary_budget_total = Decimal("0.00")
+    essentials_actual_total = Decimal("0.00")
+    discretionary_actual_total = Decimal("0.00")
+
+    for category_id, is_essential in tagged_pairs:
+        category = categories_by_id.get(category_id)
+        if category is None:
+            continue
+
+        budget_row = budget_rows.get((category_id, is_essential))
+        budget_amount = budget_row.amount if budget_row is not None else None
+        source = budget_row.source if budget_row is not None else None
+
+        totals = _monthly_totals_for_line(db, user_id, category_id, is_essential, today)
+        eligible = is_eligible_for_suggestion(totals)
+
+        actual_this_month = db.scalar(
+            select(func.sum(Transaction.amount)).where(
+                Transaction.user_id == user_id,
+                Transaction.category_id == category_id,
+                Transaction.is_essential == is_essential,
+                Transaction.occurred_on >= start,
+                Transaction.occurred_on <= end,
+            )
+        ) or Decimal("0.00")
+
+        lines.append(
+            BudgetLineRead(
+                category_id=category_id,
+                category_name=category.name,
+                is_essential=is_essential,
+                budget_amount=budget_amount,
+                source=source,
+                eligible_for_suggestion=eligible,
+                actual_this_month=actual_this_month,
+            )
+        )
+
+        if budget_amount is not None:
+            if is_essential:
+                essentials_budget_total += budget_amount
+            else:
+                discretionary_budget_total += budget_amount
+        if is_essential:
+            essentials_actual_total += actual_this_month
+        else:
+            discretionary_actual_total += actual_this_month
+
+    lines.sort(key=lambda line: (line.category_name, not line.is_essential))
+
+    projected_net = (
+        income_target_amount - essentials_budget_total - discretionary_budget_total
+        if income_target_amount is not None
+        else None
+    )
+    actual_net_so_far = actual_income_this_month - essentials_actual_total - discretionary_actual_total
+
+    return BudgetState(
+        income_target=income_target_amount,
+        actual_income_this_month=actual_income_this_month,
+        lines=lines,
+        essentials_budget_total=essentials_budget_total,
+        discretionary_budget_total=discretionary_budget_total,
+        essentials_actual_total=essentials_actual_total,
+        discretionary_actual_total=discretionary_actual_total,
+        projected_net=projected_net,
+        actual_net_so_far=actual_net_so_far,
+    )

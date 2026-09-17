@@ -1,6 +1,7 @@
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
@@ -10,6 +11,7 @@ from app.schemas.budget import (
     AcceptSuggestionRequest,
     BudgetLineSet,
     BudgetLineWriteRead,
+    BudgetState,
     IncomeTargetRead,
     IncomeTargetSet,
     SuggestionItem,
@@ -75,3 +77,15 @@ def accept_suggestion(
             detail="Not enough transaction history for a suggestion yet",
         )
     return line
+
+
+@router.get("", response_model=BudgetState)
+def get_budget(
+    month: str | None = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    if month is None:
+        today = date.today()
+        month = f"{today.year:04d}-{today.month:02d}"
+    return budget_service.get_budget_state(db, user_id, month)

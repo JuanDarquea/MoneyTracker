@@ -1,26 +1,16 @@
-import calendar
 import uuid
 from decimal import Decimal
-from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Category, Transaction, TransactionType
 from app.schemas.summary import CategoryBreakdownItem, MonthlySummary
-
-
-def _month_bounds(month: str) -> tuple[date, date]:
-    year_str, month_str = month.split("-")
-    year, month_num = int(year_str), int(month_str)
-    start = date(year, month_num, 1)
-    last_day = calendar.monthrange(year, month_num)[1]
-    end = date(year, month_num, last_day)
-    return start, end
+from app.services.date_utils import month_bounds
 
 
 def get_monthly_summary(db: Session, user_id: uuid.UUID, month: str) -> MonthlySummary:
-    start, end = _month_bounds(month)
+    start, end = month_bounds(month)
 
     stmt = (
         select(
