@@ -40,3 +40,14 @@ class BudgetLineWriteRead(BaseModel):
     is_essential: bool
     amount: Decimal
     source: BudgetSource
+
+
+class AcceptSuggestionRequest(BaseModel):
+    category_id: uuid.UUID
+    is_essential: bool
+
+
+class SuggestionItem(BaseModel):
+    category_id: uuid.UUID
+    is_essential: bool
+    suggested_amount: Decimal
