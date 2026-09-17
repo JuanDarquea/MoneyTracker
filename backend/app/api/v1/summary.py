@@ -14,7 +14,7 @@ router = APIRouter(prefix="/summary", tags=["summary"])
 
 @router.get("", response_model=MonthlySummary)
 def get_summary(
-    month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
+    month: str | None = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     db: Session = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ):

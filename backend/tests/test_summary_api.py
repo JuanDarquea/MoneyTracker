@@ -81,6 +81,14 @@ def test_summary_defaults_to_current_month(client, auth_headers, seeded_category
     assert response.json()["total_expense"] == "10.00"
 
 
+def test_summary_rejects_invalid_month_value(client, auth_headers):
+    response = client.get("/api/v1/summary?month=2026-13", headers=auth_headers)
+    assert response.status_code == 422
+
+    response = client.get("/api/v1/summary?month=2026-00", headers=auth_headers)
+    assert response.status_code == 422
+
+
 def test_summary_is_isolated_between_users(client, auth_headers, seeded_category):
     client.post(
         "/api/v1/transactions",
