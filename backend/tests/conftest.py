@@ -58,8 +58,14 @@ def db() -> Session:
 
 
 @pytest.fixture()
-def seeded_category(db: Session) -> Category:
-    category = Category(id=uuid.uuid4(), name="Food", type=CategoryType.EXPENSE, is_essential=True)
+def seeded_category(db: Session, user_id: uuid.UUID) -> Category:
+    category = Category(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        name="Food",
+        type=CategoryType.EXPENSE,
+        is_essential=True,
+    )
     db.add(category)
     db.commit()
     db.refresh(category)
