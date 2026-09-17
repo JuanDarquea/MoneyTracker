@@ -73,6 +73,21 @@ def seeded_category(db: Session, user_id: uuid.UUID) -> Category:
 
 
 @pytest.fixture()
+def seeded_income_category(db: Session, user_id: uuid.UUID) -> Category:
+    category = Category(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        name="Salary",
+        type=CategoryType.INCOME,
+        is_essential=None,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+@pytest.fixture()
 def other_user_id() -> uuid.UUID:
     return uuid.uuid4()
 
