@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../transactions/screens/transaction_entry_screen.dart';
+import '../../../core/home_shell.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
 
@@ -23,7 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authControllerProvider, (previous, next) {
       if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const TransactionEntryScreen()),
+          MaterialPageRoute(builder: (_) => const HomeShell()),
         );
       }
     });

@@ -1,22 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../categories/providers/category_provider.dart';
 import '../models/transaction.dart';
 import '../providers/transaction_provider.dart';
-
-// M1 ships without category CRUD (M2) — the seeded defaults from the
-// backend migration are hardcoded here as a stopgap, matching the
-// deterministic uuid.uuid5(NAMESPACE_DNS, "moneytracker.category.<name>")
-// ids the migration now computes (0001_initial_schema.py), so these values
-// are stable across any fresh migration run instead of the old random
-// uuid.uuid4() ids. Replace with a real category fetch once
-// GET /api/v1/categories exists in M2.
-const _placeholderCategories = <String, String>{
-  'Food': '998d9800-24a4-546b-bd8d-ba9da62a8c34',
-  'Transport': 'a4bc6c20-407d-54ff-b000-88e50cc1af90',
-  'Housing': 'f6bf3470-d8c9-59bf-9195-e686c79f041f',
-  'Salary': '75da12ec-3bee-505e-aa31-20caa12f7e00',
-};
 
 class TransactionEntryScreen extends ConsumerStatefulWidget {
   const TransactionEntryScreen({super.key});
@@ -29,12 +16,13 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String _type = 'expense';
-  String _category = _placeholderCategories.keys.first;
+  String? _categoryId;
   DateTime _occurredOn = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
     final entryState = ref.watch(transactionEntryControllerProvider);
+    final categoriesAsync = ref.watch(categoryListProvider);
 
     ref.listen(transactionEntryControllerProvider, (previous, next) {
       if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
@@ -45,7 +33,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
         _noteController.clear();
         setState(() {
           _type = 'expense';
-          _category = _placeholderCategories.keys.first;
+          _categoryId = null;
           _occurredOn = DateTime.now();
         });
       }
@@ -64,7 +52,10 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
                 ButtonSegment(value: 'income', label: Text('Income')),
               ],
               selected: {_type},
-              onSelectionChanged: (selection) => setState(() => _type = selection.first),
+              onSelectionChanged: (selection) => setState(() {
+                _type = selection.first;
+                _categoryId = null;
+              }),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -74,13 +65,24 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 12),
-            DropdownButton<String>(
-              key: const Key('category_dropdown'),
-              value: _category,
-              items: _placeholderCategories.keys
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (value) => setState(() => _category = value ?? _category),
+            categoriesAsync.when(
+              data: (categories) {
+                final filtered = categories.where((c) => c.type == _type).toList();
+                if (_categoryId == null && filtered.isNotEmpty) {
+                  _categoryId = filtered.first.id;
+                }
+                return DropdownButton<String>(
+                  key: const Key('category_dropdown'),
+                  value: _categoryId,
+                  items: filtered
+                      .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                      .toList(),
+                  onChanged: (value) => setState(() => _categoryId = value),
+                );
+              },
+              loading: () => const CircularProgressIndicator(key: Key('category_dropdown')),
+              error: (error, _) =>
+                  Text('Failed to load categories: $error', key: const Key('category_dropdown')),
             ),
             const SizedBox(height: 12),
             InkWell(
@@ -130,8 +132,10 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
   }
 
   void _submit() {
+    final categoryId = _categoryId;
+    if (categoryId == null) return;
     final draft = TransactionDraft(
-      categoryId: _placeholderCategories[_category]!,
+      categoryId: categoryId,
       type: _type,
       amount: _amountController.text,
       occurredOn: _occurredOn.toIso8601String().split('T').first,
