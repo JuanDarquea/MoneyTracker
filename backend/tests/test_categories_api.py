@@ -38,7 +38,7 @@ def test_list_categories_lazy_seed_is_idempotent(client, auth_headers):
 def test_create_category(client, auth_headers):
     response = client.post(
         "/api/v1/categories",
-        json={"name": "Gym", "type": "expense", "is_essential": False},
+        json={"name": "Gym", "type": "expense"},
         headers=auth_headers,
     )
     assert response.status_code == 201
@@ -47,45 +47,20 @@ def test_create_category(client, auth_headers):
     assert created["is_archived"] is False
 
 
-def test_create_category_rejects_is_essential_on_income(client, auth_headers):
-    response = client.post(
-        "/api/v1/categories",
-        json={"name": "Freelance", "type": "income", "is_essential": True},
-        headers=auth_headers,
-    )
-    assert response.status_code == 422
-
-
-def test_update_category_name_and_essential(client, auth_headers):
+def test_update_category_name(client, auth_headers):
     created = client.post(
         "/api/v1/categories",
-        json={"name": "Gym", "type": "expense", "is_essential": False},
+        json={"name": "Gym", "type": "expense"},
         headers=auth_headers,
     ).json()
 
     response = client.patch(
         f"/api/v1/categories/{created['id']}",
-        json={"name": "Gym Membership", "is_essential": True},
+        json={"name": "Gym Membership"},
         headers=auth_headers,
     )
     assert response.status_code == 200
     assert response.json()["name"] == "Gym Membership"
-    assert response.json()["is_essential"] is True
-
-
-def test_update_category_rejects_is_essential_on_income(client, auth_headers):
-    created = client.post(
-        "/api/v1/categories",
-        json={"name": "Freelance", "type": "income"},
-        headers=auth_headers,
-    ).json()
-
-    response = client.patch(
-        f"/api/v1/categories/{created['id']}",
-        json={"is_essential": True},
-        headers=auth_headers,
-    )
-    assert response.status_code == 422
 
 
 def test_archive_category_hides_it_from_default_list(client, auth_headers):

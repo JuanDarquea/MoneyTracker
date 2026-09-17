@@ -5,11 +5,25 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
+from app.models import TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionRead, TransactionUpdate
 from app.services import categories as categories_service
 from app.services import transactions as transactions_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
+
+
+def _check_is_essential_coherence(effective_type: TransactionType, effective_is_essential: bool | None) -> None:
+    if effective_type == TransactionType.EXPENSE and effective_is_essential is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="is_essential is required for expense transactions",
+        )
+    if effective_type == TransactionType.INCOME and effective_is_essential is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="is_essential cannot be set on an income transaction",
+        )
 
 
 @router.post("", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
@@ -26,6 +40,7 @@ def create_transaction(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Transaction type must match the category's type",
         )
+    _check_is_essential_coherence(payload.type, payload.is_essential)
     return transactions_service.create_transaction(db, user_id, payload)
 
 
@@ -59,13 +74,15 @@ def update_transaction(
     txn = transactions_service.get_transaction(db, user_id, transaction_id)
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    effective_type = payload.type if payload.type is not None else txn.type
+
     if payload.category_id is not None:
         # category_id is changing (type may or may not be changing alongside it):
         # validate the *new* category against whichever type will end up in effect.
         category = categories_service.get_category(db, user_id, payload.category_id)
         if category is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-        effective_type = payload.type if payload.type is not None else txn.type
         if effective_type != category.type:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -80,6 +97,12 @@ def update_transaction(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Transaction type must match the category's type",
             )
+
+    effective_is_essential = (
+        payload.is_essential if "is_essential" in payload.model_fields_set else txn.is_essential
+    )
+    _check_is_essential_coherence(effective_type, effective_is_essential)
+
     return transactions_service.update_transaction(db, txn, payload)
 
 

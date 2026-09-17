@@ -23,5 +23,4 @@ class Category(Base):
         Enum(CategoryType, name="category_type", values_callable=lambda enum_cls: [member.value for member in enum_cls]),
         nullable=False,
     )
-    is_essential: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

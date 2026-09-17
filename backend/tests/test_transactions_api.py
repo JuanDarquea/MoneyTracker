@@ -34,6 +34,7 @@ def test_create_transaction_requires_auth(client, seeded_category):
             "type": "expense",
             "amount": "12.50",
             "occurred_on": "2026-09-01",
+            "is_essential": True,
         },
     )
     assert response.status_code == 401
@@ -48,6 +49,7 @@ def test_create_and_get_transaction(client, auth_headers, seeded_category):
             "amount": "12.50",
             "occurred_on": "2026-09-01",
             "note": "Lunch",
+            "is_essential": True,
         },
         headers=auth_headers,
     )
@@ -68,6 +70,7 @@ def test_list_transactions_scoped_to_user(client, auth_headers, seeded_category)
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     )
@@ -88,6 +91,7 @@ def test_update_transaction(client, auth_headers, seeded_category):
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -109,6 +113,7 @@ def test_delete_transaction(client, auth_headers, seeded_category):
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -128,6 +133,7 @@ def test_create_transaction_rejects_other_users_category(client, auth_headers, o
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     )
@@ -142,6 +148,7 @@ def test_update_transaction_rejects_other_users_category(client, auth_headers, s
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -166,6 +173,7 @@ def test_transactions_are_isolated_between_users(client, auth_headers, seeded_ca
             "amount": "5.00",
             "occurred_on": "2026-09-02",
             "note": "User A lunch",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -178,6 +186,7 @@ def test_transactions_are_isolated_between_users(client, auth_headers, seeded_ca
             "amount": "99.00",
             "occurred_on": "2026-09-03",
             "note": "User B rent",
+            "is_essential": True,
         },
         headers=user_b_headers,
     ).json()
@@ -189,7 +198,7 @@ def test_transactions_are_isolated_between_users(client, auth_headers, seeded_ca
     assert user_a_ids == {user_a_transaction["id"]}
     assert user_b_transaction["id"] not in user_a_ids
 
-    # User A cannot fetch, patch, or delete user B's transaction by id (404, not 403 —
+    # User A cannot fetch, patch, or delete user B's transaction by id (404, not 403 --
     # preserving "don't leak existence" semantics used elsewhere in this file).
     get_response = client.get(f"/api/v1/transactions/{user_b_transaction['id']}", headers=auth_headers)
     assert get_response.status_code == 404
@@ -236,6 +245,7 @@ def test_update_transaction_type_alone_rejects_mismatch_with_existing_category(
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -259,6 +269,7 @@ def test_update_transaction_category_id_alone_rejects_mismatch_with_existing_typ
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
@@ -282,15 +293,89 @@ def test_update_transaction_category_and_type_together_allows_consistent_pair(
             "type": "expense",
             "amount": "5.00",
             "occurred_on": "2026-09-02",
+            "is_essential": True,
         },
         headers=auth_headers,
     ).json()
 
     response = client.patch(
         f"/api/v1/transactions/{created['id']}",
-        json={"category_id": str(seeded_income_category.id), "type": "income"},
+        json={"category_id": str(seeded_income_category.id), "type": "income", "is_essential": None},
         headers=auth_headers,
     )
     assert response.status_code == 200
     assert response.json()["type"] == "income"
     assert response.json()["category_id"] == str(seeded_income_category.id)
+    assert response.json()["is_essential"] is None
+
+
+def test_create_expense_transaction_without_is_essential_is_rejected(client, auth_headers, seeded_category):
+    response = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_create_income_transaction_with_is_essential_is_rejected(client, auth_headers, seeded_income_category):
+    response = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_income_category.id),
+            "type": "income",
+            "amount": "1000.00",
+            "occurred_on": "2026-09-02",
+            "is_essential": True,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+def test_update_can_change_is_essential_alone(client, auth_headers, seeded_category):
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+            "is_essential": True,
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"is_essential": False},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["is_essential"] is False
+
+
+def test_update_cannot_clear_is_essential_on_an_expense_transaction(client, auth_headers, seeded_category):
+    created = client.post(
+        "/api/v1/transactions",
+        json={
+            "category_id": str(seeded_category.id),
+            "type": "expense",
+            "amount": "5.00",
+            "occurred_on": "2026-09-02",
+            "is_essential": True,
+        },
+        headers=auth_headers,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"is_essential": None},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422

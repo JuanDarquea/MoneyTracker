@@ -22,6 +22,7 @@ class TransactionBase(BaseModel):
     amount: Decimal
     occurred_on: date
     note: str | None = None
+    is_essential: bool | None = None
 
     @field_validator("amount")
     @classmethod
@@ -39,6 +40,7 @@ class TransactionUpdate(BaseModel):
     amount: Decimal | None = None
     occurred_on: date | None = None
     note: str | None = None
+    is_essential: bool | None = None
 
     @field_validator("amount", mode="after")
     @classmethod

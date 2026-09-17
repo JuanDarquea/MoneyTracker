@@ -6,14 +6,14 @@ from sqlalchemy.orm import Session
 from app.models import Category, CategoryType
 from app.schemas.category import CategoryCreate, CategoryUpdate
 
-DEFAULT_CATEGORIES: list[tuple[str, CategoryType, bool | None]] = [
-    ("Salary", CategoryType.INCOME, None),
-    ("Food", CategoryType.EXPENSE, True),
-    ("Transport", CategoryType.EXPENSE, True),
-    ("Housing", CategoryType.EXPENSE, True),
-    ("Utilities", CategoryType.EXPENSE, True),
-    ("Entertainment", CategoryType.EXPENSE, False),
-    ("Shopping", CategoryType.EXPENSE, False),
+DEFAULT_CATEGORIES: list[tuple[str, CategoryType]] = [
+    ("Salary", CategoryType.INCOME),
+    ("Food", CategoryType.EXPENSE),
+    ("Transport", CategoryType.EXPENSE),
+    ("Housing", CategoryType.EXPENSE),
+    ("Utilities", CategoryType.EXPENSE),
+    ("Entertainment", CategoryType.EXPENSE),
+    ("Shopping", CategoryType.EXPENSE),
 ]
 
 
@@ -27,14 +27,13 @@ def ensure_default_categories(db: Session, user_id: uuid.UUID) -> None:
     if db.scalars(stmt).first() is not None:
         return
 
-    for name, cat_type, is_essential in DEFAULT_CATEGORIES:
+    for name, cat_type in DEFAULT_CATEGORIES:
         db.add(
             Category(
                 id=uuid.uuid4(),
                 user_id=user_id,
                 name=name,
                 type=cat_type,
-                is_essential=is_essential,
             )
         )
     db.commit()

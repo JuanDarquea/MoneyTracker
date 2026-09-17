@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
-from app.models import CategoryType
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services import categories as categories_service
 
@@ -40,9 +39,4 @@ def update_category(
     category = categories_service.get_category(db, user_id, category_id)
     if category is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-    if payload.is_essential is not None and category.type == CategoryType.INCOME:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="is_essential can only be set on an expense category",
-        )
     return categories_service.update_category(db, category, payload)

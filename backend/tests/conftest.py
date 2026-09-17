@@ -64,7 +64,6 @@ def seeded_category(db: Session, user_id: uuid.UUID) -> Category:
         user_id=user_id,
         name="Food",
         type=CategoryType.EXPENSE,
-        is_essential=True,
     )
     db.add(category)
     db.commit()
@@ -79,7 +78,6 @@ def seeded_income_category(db: Session, user_id: uuid.UUID) -> Category:
         user_id=user_id,
         name="Salary",
         type=CategoryType.INCOME,
-        is_essential=None,
     )
     db.add(category)
     db.commit()
@@ -99,7 +97,6 @@ def other_user_category(db: Session, other_user_id: uuid.UUID) -> Category:
         user_id=other_user_id,
         name="Rent",
         type=CategoryType.EXPENSE,
-        is_essential=True,
     )
     db.add(category)
     db.commit()

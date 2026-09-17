@@ -34,12 +34,12 @@ def test_summary_for_empty_month_returns_zeroed_totals(client, auth_headers):
 def test_summary_aggregates_by_category_and_type(client, auth_headers, seeded_category, seeded_income_category):
     client.post(
         "/api/v1/transactions",
-        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "20.00", "occurred_on": "2026-09-05"},
+        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "20.00", "occurred_on": "2026-09-05", "is_essential": True},
         headers=auth_headers,
     )
     client.post(
         "/api/v1/transactions",
-        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "15.50", "occurred_on": "2026-09-10"},
+        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "15.50", "occurred_on": "2026-09-10", "is_essential": False},
         headers=auth_headers,
     )
     client.post(
@@ -50,7 +50,7 @@ def test_summary_aggregates_by_category_and_type(client, auth_headers, seeded_ca
     # Outside the queried month -- must not be included.
     client.post(
         "/api/v1/transactions",
-        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "999.00", "occurred_on": "2026-08-15"},
+        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "999.00", "occurred_on": "2026-08-15", "is_essential": True},
         headers=auth_headers,
     )
 
@@ -72,7 +72,7 @@ def test_summary_defaults_to_current_month(client, auth_headers, seeded_category
     today = date.today().isoformat()
     client.post(
         "/api/v1/transactions",
-        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "10.00", "occurred_on": today},
+        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "10.00", "occurred_on": today, "is_essential": True},
         headers=auth_headers,
     )
 
@@ -92,7 +92,7 @@ def test_summary_rejects_invalid_month_value(client, auth_headers):
 def test_summary_is_isolated_between_users(client, auth_headers, seeded_category):
     client.post(
         "/api/v1/transactions",
-        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "50.00", "occurred_on": "2026-09-05"},
+        json={"category_id": str(seeded_category.id), "type": "expense", "amount": "50.00", "occurred_on": "2026-09-05", "is_essential": True},
         headers=auth_headers,
     )
 
