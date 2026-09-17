@@ -5,6 +5,7 @@ class TransactionDraft {
     required this.amount,
     required this.occurredOn,
     this.note,
+    this.isEssential,
   });
 
   final String categoryId;
@@ -12,6 +13,7 @@ class TransactionDraft {
   final String amount;
   final String occurredOn;
   final String? note;
+  final bool? isEssential;
 
   Map<String, dynamic> toJson() => {
         'category_id': categoryId,
@@ -19,5 +21,6 @@ class TransactionDraft {
         'amount': amount,
         'occurred_on': occurredOn,
         if (note != null && note!.isNotEmpty) 'note': note,
+        if (isEssential != null) 'is_essential': isEssential,
       };
 }

@@ -34,12 +34,11 @@ void main() {
     await Supabase.initialize(url: 'http://localhost:54321', publishableKey: 'test-anon-key');
   });
 
-  testWidgets(
-      'CategoryListScreen renders fetched categories with an essential toggle only for expense categories',
+  testWidgets('CategoryListScreen renders fetched categories without an essential toggle',
       (tester) async {
     final categories = [
-      Category(id: '1', name: 'Food', type: 'expense', isEssential: true, isArchived: false),
-      Category(id: '2', name: 'Salary', type: 'income', isEssential: null, isArchived: false),
+      Category(id: '1', name: 'Food', type: 'expense', isArchived: false),
+      Category(id: '2', name: 'Salary', type: 'income', isArchived: false),
     ];
 
     await tester.pumpWidget(
@@ -52,8 +51,7 @@ void main() {
 
     expect(find.text('Food'), findsOneWidget);
     expect(find.text('Salary'), findsOneWidget);
-    expect(find.byKey(const Key('essential_toggle_1')), findsOneWidget);
-    expect(find.byKey(const Key('essential_toggle_2')), findsNothing);
+    expect(find.byKey(const Key('essential_toggle_1')), findsNothing);
     expect(find.byKey(const Key('add_category_button')), findsOneWidget);
   });
 
@@ -61,7 +59,7 @@ void main() {
       'CategoryListScreen shows a SnackBar when a category mutation fails',
       (tester) async {
     final categories = [
-      Category(id: '1', name: 'Food', type: 'expense', isEssential: true, isArchived: false),
+      Category(id: '1', name: 'Food', type: 'expense', isArchived: false),
     ];
 
     await tester.pumpWidget(

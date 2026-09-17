@@ -22,8 +22,8 @@ void main() {
   });
 
   final fakeCategories = [
-    Category(id: '1', name: 'Food', type: 'expense', isEssential: true, isArchived: false),
-    Category(id: '2', name: 'Salary', type: 'income', isEssential: null, isArchived: false),
+    Category(id: '1', name: 'Food', type: 'expense', isArchived: false),
+    Category(id: '2', name: 'Salary', type: 'income', isArchived: false),
   ];
 
   testWidgets('TransactionEntryScreen exposes exactly the required fields',
@@ -39,9 +39,28 @@ void main() {
     expect(find.byKey(const Key('amount_field')), findsOneWidget);
     expect(find.byKey(const Key('type_toggle')), findsOneWidget);
     expect(find.byKey(const Key('category_dropdown')), findsOneWidget);
+    expect(find.byKey(const Key('essential_toggle')), findsOneWidget);
     expect(find.byKey(const Key('date_field')), findsOneWidget);
     expect(find.byKey(const Key('note_field')), findsOneWidget);
     expect(find.byKey(const Key('submit_button')), findsOneWidget);
+  });
+
+  testWidgets('Essential/Discretionary toggle only shows for expense type',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [categoryListProvider.overrideWith((ref) async => fakeCategories)],
+        child: const MaterialApp(home: TransactionEntryScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('essential_toggle')), findsOneWidget);
+
+    await tester.tap(find.text('Income'));
+    await tester.pump();
+
+    expect(find.byKey(const Key('essential_toggle')), findsNothing);
   });
 
   testWidgets('Category dropdown only shows categories matching the selected type',

@@ -50,22 +50,10 @@ class _CategoryTile extends ConsumerWidget {
     return ListTile(
       title: Text(category.name),
       subtitle: Text(category.type),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (category.type == 'expense')
-            Switch(
-              key: Key('essential_toggle_${category.id}'),
-              value: category.isEssential ?? false,
-              onChanged: (value) =>
-                  ref.read(categoryControllerProvider.notifier).setEssential(category.id, value),
-            ),
-          IconButton(
-            key: Key('archive_button_${category.id}'),
-            icon: const Icon(Icons.archive_outlined),
-            onPressed: () => ref.read(categoryControllerProvider.notifier).archive(category.id),
-          ),
-        ],
+      trailing: IconButton(
+        key: Key('archive_button_${category.id}'),
+        icon: const Icon(Icons.archive_outlined),
+        onPressed: () => ref.read(categoryControllerProvider.notifier).archive(category.id),
       ),
     );
   }

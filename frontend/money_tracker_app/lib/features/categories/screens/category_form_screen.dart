@@ -13,7 +13,6 @@ class CategoryFormScreen extends ConsumerStatefulWidget {
 class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
   final _nameController = TextEditingController();
   String _type = 'expense';
-  bool _isEssential = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,16 +45,8 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
               selected: {_type},
               onSelectionChanged: (selection) => setState(() {
                 _type = selection.first;
-                if (_type == 'income') _isEssential = false;
               }),
             ),
-            if (_type == 'expense')
-              SwitchListTile(
-                key: const Key('category_essential_toggle'),
-                title: const Text('Essential'),
-                value: _isEssential,
-                onChanged: (value) => setState(() => _isEssential = value),
-              ),
             const SizedBox(height: 24),
             if (controllerState.hasError)
               Text('Failed to save: ${controllerState.error}', style: const TextStyle(color: Colors.red)),
@@ -76,7 +67,6 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
     ref.read(categoryControllerProvider.notifier).create(
           name: _nameController.text.trim(),
           type: _type,
-          isEssential: _type == 'expense' ? _isEssential : null,
         );
   }
 }

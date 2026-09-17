@@ -17,6 +17,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
   final _noteController = TextEditingController();
   String _type = 'expense';
   String? _categoryId;
+  bool _isEssential = true;
   DateTime _occurredOn = DateTime.now();
 
   @override
@@ -34,6 +35,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
         setState(() {
           _type = 'expense';
           _categoryId = null;
+          _isEssential = true;
           _occurredOn = DateTime.now();
         });
       }
@@ -84,6 +86,17 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
               error: (error, _) =>
                   Text('Failed to load categories: $error', key: const Key('category_dropdown')),
             ),
+            const SizedBox(height: 12),
+            if (_type == 'expense')
+              SegmentedButton<bool>(
+                key: const Key('essential_toggle'),
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Essential')),
+                  ButtonSegment(value: false, label: Text('Discretionary')),
+                ],
+                selected: {_isEssential},
+                onSelectionChanged: (selection) => setState(() => _isEssential = selection.first),
+              ),
             const SizedBox(height: 12),
             InkWell(
               key: const Key('date_field'),
@@ -145,6 +158,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
       amount: _amountController.text,
       occurredOn: _occurredOn.toIso8601String().split('T').first,
       note: _noteController.text,
+      isEssential: _type == 'expense' ? _isEssential : null,
     );
     ref.read(transactionEntryControllerProvider.notifier).submit(draft);
   }

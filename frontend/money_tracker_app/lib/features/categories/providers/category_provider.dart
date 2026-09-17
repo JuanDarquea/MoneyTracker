@@ -22,13 +22,12 @@ class CategoryController extends StateNotifier<AsyncValue<void>> {
   final ApiClient _apiClient;
   final Ref _ref;
 
-  Future<void> create({required String name, required String type, bool? isEssential}) async {
+  Future<void> create({required String name, required String type}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await _apiClient.dio.post('/categories', data: {
         'name': name,
         'type': type,
-        if (isEssential != null) 'is_essential': isEssential,
       });
       _ref.invalidate(categoryListProvider);
     });
@@ -38,14 +37,6 @@ class CategoryController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await _apiClient.dio.patch('/categories/$categoryId', data: {'is_archived': true});
-      _ref.invalidate(categoryListProvider);
-    });
-  }
-
-  Future<void> setEssential(String categoryId, bool isEssential) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await _apiClient.dio.patch('/categories/$categoryId', data: {'is_essential': isEssential});
       _ref.invalidate(categoryListProvider);
     });
   }
