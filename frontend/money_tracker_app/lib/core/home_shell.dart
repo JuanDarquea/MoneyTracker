@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../features/budget/screens/budget_screen.dart';
 import '../features/categories/screens/category_list_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/transactions/screens/transaction_entry_screen.dart';
@@ -18,6 +19,7 @@ class _HomeShellState extends State<HomeShell> {
     DashboardScreen(),
     TransactionEntryScreen(),
     CategoryListScreen(),
+    BudgetScreen(),
   ];
 
   @override
@@ -32,6 +34,7 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.add_circle), label: 'Add'),
           NavigationDestination(icon: Icon(Icons.category), label: 'Categories'),
+          NavigationDestination(icon: Icon(Icons.savings), label: 'Budget'),
         ],
       ),
     );
