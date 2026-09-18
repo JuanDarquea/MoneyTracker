@@ -7,6 +7,7 @@ class BudgetLine {
     required this.source,
     required this.eligibleForSuggestion,
     required this.actualThisMonth,
+    this.isArchived = false,
   });
 
   final String categoryId;
@@ -16,6 +17,7 @@ class BudgetLine {
   final String? source;
   final bool eligibleForSuggestion;
   final String actualThisMonth;
+  final bool isArchived;
 
   factory BudgetLine.fromJson(Map<String, dynamic> json) => BudgetLine(
         categoryId: json['category_id'] as String,
@@ -25,6 +27,7 @@ class BudgetLine {
         source: json['source'] as String?,
         eligibleForSuggestion: json['eligible_for_suggestion'] as bool,
         actualThisMonth: json['actual_this_month'] as String,
+        isArchived: json['is_archived'] as bool? ?? false,
       );
 }
 

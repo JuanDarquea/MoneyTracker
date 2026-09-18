@@ -162,6 +162,134 @@ void main() {
     expect(controller.lastAcceptedIsEssential, false);
   });
 
+  testWidgets(
+      'Tapping the edit icon on a line with a budget reveals a pre-filled input, and saving calls setLine',
+      (tester) async {
+    late _RecordingBudgetController controller;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          budgetProvider.overrideWith((ref) async => state),
+          budgetSuggestionsProvider.overrideWith((ref) async => <BudgetSuggestion>[]),
+          budgetControllerProvider.overrideWith((ref) {
+            controller = _RecordingBudgetController(ref.watch(apiClientProvider), ref);
+            return controller;
+          }),
+        ],
+        child: const MaterialApp(home: BudgetScreen()),
+      ),
+    );
+    await tester.pump();
+
+    // Line 1-true has a budget of 300.00 -- cold-start input is not shown,
+    // only the read-only progress display and an edit icon.
+    expect(find.byKey(const Key('line_progress_1-true')), findsOneWidget);
+    expect(find.byKey(const Key('line_amount_field_1-true')), findsNothing);
+    expect(find.byKey(const Key('edit_line_button_1-true')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('edit_line_button_1-true')));
+    await tester.pump();
+
+    final input = tester.widget<TextField>(find.byKey(const Key('line_amount_field_1-true')));
+    expect(input.controller?.text, '300.00');
+
+    await tester.enterText(find.byKey(const Key('line_amount_field_1-true')), '350.00');
+    await tester.tap(find.byKey(const Key('save_line_button_1-true')));
+    await tester.pump();
+
+    expect(controller.lastLineCategoryId, '1');
+    expect(controller.lastLineIsEssential, true);
+    expect(controller.lastLineAmount, '350.00');
+  });
+
+  testWidgets('An archived-category line with a budget shows no interactive controls', (tester) async {
+    final archivedLineWithBudget = BudgetLine(
+      categoryId: '2',
+      categoryName: 'Old Category',
+      isEssential: true,
+      budgetAmount: '200.00',
+      source: 'manual',
+      eligibleForSuggestion: true,
+      actualThisMonth: '50.00',
+      isArchived: true,
+    );
+    final archivedState = BudgetState(
+      incomeTarget: '3000.00',
+      actualIncomeThisMonth: '1000.00',
+      lines: [archivedLineWithBudget],
+      essentialsBudgetTotal: '200.00',
+      discretionaryBudgetTotal: '0.00',
+      essentialsActualTotal: '50.00',
+      discretionaryActualTotal: '0.00',
+      projectedNet: '2800.00',
+      actualNetSoFar: '950.00',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          budgetProvider.overrideWith((ref) async => archivedState),
+          budgetSuggestionsProvider.overrideWith(
+            (ref) async => [BudgetSuggestion(categoryId: '2', isEssential: true, suggestedAmount: '99.00')],
+          ),
+        ],
+        child: const MaterialApp(home: BudgetScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('line_progress_2-true')), findsOneWidget);
+    expect(find.text('50.00 / 200.00'), findsOneWidget);
+    expect(find.byKey(const Key('edit_line_button_2-true')), findsNothing);
+    expect(find.byKey(const Key('line_amount_field_2-true')), findsNothing);
+    expect(find.byKey(const Key('save_line_button_2-true')), findsNothing);
+    expect(find.byKey(const Key('accept_suggestion_button_2-true')), findsNothing);
+  });
+
+  testWidgets('An archived-category line with no budget shows a read-only 0.00 display and no controls',
+      (tester) async {
+    final archivedLineNoBudget = BudgetLine(
+      categoryId: '3',
+      categoryName: 'Retired Category',
+      isEssential: false,
+      budgetAmount: null,
+      source: null,
+      eligibleForSuggestion: true,
+      actualThisMonth: '10.00',
+      isArchived: true,
+    );
+    final archivedState = BudgetState(
+      incomeTarget: '3000.00',
+      actualIncomeThisMonth: '1000.00',
+      lines: [archivedLineNoBudget],
+      essentialsBudgetTotal: '0.00',
+      discretionaryBudgetTotal: '0.00',
+      essentialsActualTotal: '0.00',
+      discretionaryActualTotal: '10.00',
+      projectedNet: '3000.00',
+      actualNetSoFar: '990.00',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          budgetProvider.overrideWith((ref) async => archivedState),
+          budgetSuggestionsProvider.overrideWith((ref) async => <BudgetSuggestion>[]),
+        ],
+        child: const MaterialApp(home: BudgetScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('line_progress_3-false')), findsOneWidget);
+    expect(find.text('10.00 / 0.00'), findsOneWidget);
+    expect(find.byKey(const Key('edit_line_button_3-false')), findsNothing);
+    expect(find.byKey(const Key('line_amount_field_3-false')), findsNothing);
+    expect(find.byKey(const Key('save_line_button_3-false')), findsNothing);
+    expect(find.byKey(const Key('accept_suggestion_button_3-false')), findsNothing);
+  });
+
   testWidgets('Saving the income target calls setIncomeTarget', (tester) async {
     late _RecordingBudgetController controller;
 

@@ -162,7 +162,7 @@ BudgetSuggestion? _matchingSuggestion(List<BudgetSuggestion> suggestions, String
   return null;
 }
 
-class _BudgetLineTile extends ConsumerWidget {
+class _BudgetLineTile extends ConsumerStatefulWidget {
   const _BudgetLineTile({required this.line, required this.controller, required this.suggestionsAsync});
 
   final BudgetLine line;
@@ -170,19 +170,63 @@ class _BudgetLineTile extends ConsumerWidget {
   final AsyncValue<List<BudgetSuggestion>> suggestionsAsync;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BudgetLineTile> createState() => _BudgetLineTileState();
+}
+
+class _BudgetLineTileState extends ConsumerState<_BudgetLineTile> {
+  // Whether this tile is showing the input+save UI for a line that already
+  // has a budget (entered via the edit icon). Archived lines never enter
+  // edit mode -- un-archiving isn't supported anywhere in the app, so an
+  // archived line's budget is permanently frozen/read-only.
+  bool _editMode = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = widget.line;
+    final controller = widget.controller;
+    final suggestionsAsync = widget.suggestionsAsync;
+    final controllerState = ref.watch(budgetControllerProvider);
+
     final keySuffix = '${line.categoryId}-${line.isEssential}';
     final hasBudget = line.budgetAmount != null;
-    final fraction = hasBudget
-        ? ((double.tryParse(line.actualThisMonth) ?? 0) / (double.tryParse(line.budgetAmount!) ?? 1))
-            .clamp(0.0, 1.0)
-        : 0.0;
-    final suggestion = line.eligibleForSuggestion
+    final displayBudgetAmount = line.budgetAmount ?? '0.00';
+    final parsedBudget = double.tryParse(displayBudgetAmount) ?? 0;
+    final parsedActual = double.tryParse(line.actualThisMonth) ?? 0;
+    final rawFraction = parsedBudget > 0 ? parsedActual / parsedBudget : 0.0;
+    final isOverBudget = rawFraction > 1.0;
+    final fraction = rawFraction.clamp(0.0, 1.0);
+
+    // Archived categories are a permanent frozen/read-only state (no
+    // un-archive path exists), so they always show the progress display,
+    // regardless of hasBudget or the tile's own edit-mode flag.
+    final showReadOnly = line.isArchived || (hasBudget && !_editMode);
+    final suggestion = (!line.isArchived && line.eligibleForSuggestion)
         ? suggestionsAsync.maybeWhen(
             data: (suggestions) => _matchingSuggestion(suggestions, line.categoryId, line.isEssential),
             orElse: () => null,
           )
         : null;
+
+    Future<void> saveLine() async {
+      await ref.read(budgetControllerProvider.notifier).setLine(
+            categoryId: line.categoryId,
+            isEssential: line.isEssential,
+            amount: controller.text,
+          );
+      if (mounted && !ref.read(budgetControllerProvider).hasError) {
+        setState(() => _editMode = false);
+      }
+    }
+
+    Future<void> acceptSuggestion() async {
+      await ref.read(budgetControllerProvider.notifier).acceptSuggestion(
+            categoryId: line.categoryId,
+            isEssential: line.isEssential,
+          );
+      if (mounted && !ref.read(budgetControllerProvider).hasError) {
+        setState(() => _editMode = false);
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -190,12 +234,33 @@ class _BudgetLineTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('${line.categoryName} (${line.isEssential ? 'Essential' : 'Discretionary'})'),
-          if (hasBudget) ...[
-            Text('${line.actualThisMonth} / ${line.budgetAmount}', key: Key('line_progress_$keySuffix')),
+          if (showReadOnly) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${line.actualThisMonth} / $displayBudgetAmount',
+                    key: Key('line_progress_$keySuffix'),
+                  ),
+                ),
+                if (hasBudget && !line.isArchived)
+                  IconButton(
+                    key: Key('edit_line_button_$keySuffix'),
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      controller.text = line.budgetAmount!;
+                      setState(() => _editMode = true);
+                    },
+                  ),
+              ],
+            ),
             FractionallySizedBox(
               widthFactor: fraction,
               alignment: Alignment.centerLeft,
-              child: Container(height: 8, color: Theme.of(context).colorScheme.primary),
+              child: Container(
+                height: 8,
+                color: isOverBudget ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
+              ),
             ),
           ] else ...[
             Row(
@@ -211,19 +276,12 @@ class _BudgetLineTile extends ConsumerWidget {
                 IconButton(
                   key: Key('save_line_button_$keySuffix'),
                   icon: const Icon(Icons.check),
-                  onPressed: () => ref.read(budgetControllerProvider.notifier).setLine(
-                        categoryId: line.categoryId,
-                        isEssential: line.isEssential,
-                        amount: controller.text,
-                      ),
+                  onPressed: controllerState.isLoading ? null : saveLine,
                 ),
                 if (suggestion != null)
                   TextButton(
                     key: Key('accept_suggestion_button_$keySuffix'),
-                    onPressed: () => ref.read(budgetControllerProvider.notifier).acceptSuggestion(
-                          categoryId: line.categoryId,
-                          isEssential: line.isEssential,
-                        ),
+                    onPressed: controllerState.isLoading ? null : acceptSuggestion,
                     child: Text('Use suggestion: ${suggestion.suggestedAmount}'),
                   ),
               ],

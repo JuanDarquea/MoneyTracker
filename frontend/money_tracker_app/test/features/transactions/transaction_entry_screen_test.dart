@@ -93,9 +93,38 @@ void main() {
     );
     await tester.pump();
 
+    // Type defaults to 'expense', so the essential/discretionary toggle
+    // still renders even with no categories available; make a choice so
+    // the submit button isn't disabled for that reason, letting the
+    // category-availability guard in _submit() fire instead.
+    await tester.tap(find.text('Essential'));
+    await tester.pump();
+
     await tester.tap(find.byKey(const Key('submit_button')));
     await tester.pump();
 
     expect(find.text('No category available for this type'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Submit button is disabled for expense type until an essential/discretionary choice is made',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [categoryListProvider.overrideWith((ref) async => fakeCategories)],
+        child: const MaterialApp(home: TransactionEntryScreen()),
+      ),
+    );
+    await tester.pump();
+
+    final submitButton = tester.widget<ElevatedButton>(find.byKey(const Key('submit_button')));
+    expect(submitButton.onPressed, isNull);
+
+    await tester.tap(find.text('Essential'));
+    await tester.pump();
+
+    final enabledSubmitButton =
+        tester.widget<ElevatedButton>(find.byKey(const Key('submit_button')));
+    expect(enabledSubmitButton.onPressed, isNotNull);
   });
 }

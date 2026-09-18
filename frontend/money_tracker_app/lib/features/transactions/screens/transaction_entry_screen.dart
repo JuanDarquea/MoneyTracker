@@ -17,7 +17,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
   final _noteController = TextEditingController();
   String _type = 'expense';
   String? _categoryId;
-  bool _isEssential = true;
+  bool? _isEssential;
   DateTime _occurredOn = DateTime.now();
 
   @override
@@ -35,7 +35,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
         setState(() {
           _type = 'expense';
           _categoryId = null;
-          _isEssential = true;
+          _isEssential = null;
           _occurredOn = DateTime.now();
         });
       }
@@ -57,6 +57,7 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
               onSelectionChanged: (selection) => setState(() {
                 _type = selection.first;
                 _categoryId = null;
+                _isEssential = null;
               }),
             ),
             const SizedBox(height: 12),
@@ -94,8 +95,10 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
                   ButtonSegment(value: true, label: Text('Essential')),
                   ButtonSegment(value: false, label: Text('Discretionary')),
                 ],
-                selected: {_isEssential},
-                onSelectionChanged: (selection) => setState(() => _isEssential = selection.first),
+                selected: _isEssential == null ? <bool>{} : {_isEssential!},
+                emptySelectionAllowed: true,
+                onSelectionChanged: (selection) =>
+                    setState(() => _isEssential = selection.isEmpty ? null : selection.first),
               ),
             const SizedBox(height: 12),
             InkWell(
@@ -121,7 +124,9 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
               Text('Failed to save: ${entryState.error}', style: const TextStyle(color: Colors.red)),
             ElevatedButton(
               key: const Key('submit_button'),
-              onPressed: entryState.isLoading ? null : _submit,
+              onPressed: entryState.isLoading || (_type == 'expense' && _isEssential == null)
+                  ? null
+                  : _submit,
               child: entryState.isLoading
                   ? const CircularProgressIndicator()
                   : const Text('Save transaction'),
@@ -150,6 +155,11 @@ class _TransactionEntryScreenState extends ConsumerState<TransactionEntryScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No category available for this type')),
       );
+      return;
+    }
+    if (_type == 'expense' && _isEssential == null) {
+      // Defense-in-depth: the submit button is already disabled in this
+      // state, but guard here too, matching the _categoryId check above.
       return;
     }
     final draft = TransactionDraft(
