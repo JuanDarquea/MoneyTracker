@@ -104,6 +104,11 @@ void main() {
     expect(find.textContaining('Food'), findsWidgets);
     expect(find.byKey(const Key('line_progress_1-true')), findsOneWidget);
     expect(find.byKey(const Key('line_amount_field_1-false')), findsOneWidget);
+    // Each _BudgetLineTile carries a stable ValueKey derived from its line's
+    // composite identity, so Flutter reconciles tiles by identity rather
+    // than list position when `state.lines` changes shape mid-edit.
+    expect(find.byKey(const ValueKey('1-true')), findsOneWidget);
+    expect(find.byKey(const ValueKey('1-false')), findsOneWidget);
   });
 
   testWidgets('Saving a manual amount on a cold-start line calls setLine', (tester) async {
@@ -247,7 +252,7 @@ void main() {
     expect(find.byKey(const Key('accept_suggestion_button_2-true')), findsNothing);
   });
 
-  testWidgets('An archived-category line with no budget shows a read-only 0.00 display and no controls',
+  testWidgets('An archived-category line with no budget shows a "no budget set" display and no controls',
       (tester) async {
     final archivedLineNoBudget = BudgetLine(
       categoryId: '3',
@@ -283,7 +288,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('line_progress_3-false')), findsOneWidget);
-    expect(find.text('10.00 / 0.00'), findsOneWidget);
+    expect(find.text('10.00 (no budget set)'), findsOneWidget);
     expect(find.byKey(const Key('edit_line_button_3-false')), findsNothing);
     expect(find.byKey(const Key('line_amount_field_3-false')), findsNothing);
     expect(find.byKey(const Key('save_line_button_3-false')), findsNothing);

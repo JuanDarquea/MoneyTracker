@@ -143,6 +143,7 @@ class _BudgetSection extends StatelessWidget {
         Text('Budget: $budgetTotal — Actual: $actualTotal'),
         ...lines.map(
           (line) => _BudgetLineTile(
+            key: ValueKey('${line.categoryId}-${line.isEssential}'),
             line: line,
             controller: controllerFor(line.categoryId, line.isEssential),
             suggestionsAsync: suggestionsAsync,
@@ -163,7 +164,7 @@ BudgetSuggestion? _matchingSuggestion(List<BudgetSuggestion> suggestions, String
 }
 
 class _BudgetLineTile extends ConsumerStatefulWidget {
-  const _BudgetLineTile({required this.line, required this.controller, required this.suggestionsAsync});
+  const _BudgetLineTile({super.key, required this.line, required this.controller, required this.suggestionsAsync});
 
   final BudgetLine line;
   final TextEditingController controller;
@@ -239,7 +240,9 @@ class _BudgetLineTileState extends ConsumerState<_BudgetLineTile> {
               children: [
                 Expanded(
                   child: Text(
-                    '${line.actualThisMonth} / $displayBudgetAmount',
+                    hasBudget
+                        ? '${line.actualThisMonth} / ${line.budgetAmount}'
+                        : '${line.actualThisMonth} (no budget set)',
                     key: Key('line_progress_$keySuffix'),
                   ),
                 ),
