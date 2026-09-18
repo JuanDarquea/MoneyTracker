@@ -10,8 +10,9 @@ Flutter Web/Mobile              FastAPI Backend              Supabase
 
 The frontend talks to two things directly: Supabase Auth (for sign
 up/log in — see "Auth flow" below) and the FastAPI backend (for
-transaction CRUD). The backend is the only thing that talks to Postgres;
-the frontend never queries the database directly.
+transaction and category CRUD, monthly summaries, and the budget engine).
+The backend is the only thing that talks to Postgres; the frontend never
+queries the database directly.
 
 ## Credential flow
 

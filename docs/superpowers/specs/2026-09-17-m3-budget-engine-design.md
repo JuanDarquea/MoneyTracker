@@ -64,9 +64,9 @@ UI on top of that corrected model.
    financial goal (save/invest/spend) that could adjust this — out of scope
    for M3, noted as backlog.
 8. **Outlier trim: median-deviation rule.** For a line's 3 monthly totals,
-   if the highest is more than 2× the median of the other two, drop it and
-   average the remaining 2 months weighted 2:1 (recent:older). Only ever
-   trims a high outlier — a zero or low month is real data, not noise.
+   if the highest is more than 2× the median of the 3 months' totals, drop
+   it and average the remaining 2 months weighted 2:1 (recent:older). Only
+   ever trims a high outlier — a zero or low month is real data, not noise.
 9. **Storage: two tables**, not one overloaded table — `income_targets`
    (one manual scalar per user) and `budgets` (category+tag spending lines),
    both fully `NOT NULL`. Cleaner than a single table with a nullable
