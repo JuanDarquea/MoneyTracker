@@ -128,3 +128,11 @@ def test_accept_suggestion_rejects_income_category(client, auth_headers, seeded_
 def test_suggestions_requires_auth(client):
     response = client.get("/api/v1/budget/suggestions")
     assert response.status_code == 401
+
+
+def test_accept_suggestion_requires_auth(client, seeded_category):
+    response = client.post(
+        "/api/v1/budget/lines/accept-suggestion",
+        json={"category_id": str(seeded_category.id), "is_essential": True},
+    )
+    assert response.status_code == 401

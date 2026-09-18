@@ -4,7 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models import BudgetSource
-from app.schemas.transaction import _validate_amount
+from app.schemas.transaction import validate_amount
 
 
 class IncomeTargetSet(BaseModel):
@@ -13,7 +13,7 @@ class IncomeTargetSet(BaseModel):
     @field_validator("amount")
     @classmethod
     def amount_is_valid(cls, value: Decimal) -> Decimal:
-        return _validate_amount(value)
+        return validate_amount(value)
 
 
 class IncomeTargetRead(BaseModel):
@@ -30,7 +30,7 @@ class BudgetLineSet(BaseModel):
     @field_validator("amount")
     @classmethod
     def amount_is_valid(cls, value: Decimal) -> Decimal:
-        return _validate_amount(value)
+        return validate_amount(value)
 
 
 class BudgetLineWriteRead(BaseModel):
@@ -61,6 +61,7 @@ class BudgetLineRead(BaseModel):
     source: BudgetSource | None
     eligible_for_suggestion: bool
     actual_this_month: Decimal
+    is_archived: bool
 
 
 class BudgetState(BaseModel):

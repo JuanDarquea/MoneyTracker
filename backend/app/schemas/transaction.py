@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from app.models import TransactionType
 
 
-def _validate_amount(value: Decimal) -> Decimal:
+def validate_amount(value: Decimal) -> Decimal:
     """Validate amount is positive and has at most 2 decimal places."""
     if value <= 0:
         raise ValueError("amount must be greater than zero")
@@ -27,7 +27,7 @@ class TransactionBase(BaseModel):
     @field_validator("amount")
     @classmethod
     def amount_is_positive_with_two_decimals(cls, value: Decimal) -> Decimal:
-        return _validate_amount(value)
+        return validate_amount(value)
 
 
 class TransactionCreate(TransactionBase):
@@ -47,7 +47,7 @@ class TransactionUpdate(BaseModel):
     def validate_amount_if_provided(cls, value: Decimal | None) -> Decimal | None:
         if value is None:
             return None
-        return _validate_amount(value)
+        return validate_amount(value)
 
 
 class TransactionRead(TransactionBase):

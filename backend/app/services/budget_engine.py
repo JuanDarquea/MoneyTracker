@@ -31,10 +31,12 @@ def compute_suggested_amount(monthly_totals: list[Decimal]) -> Decimal:
     highest = max(monthly_totals)
     median = sorted(monthly_totals)[1]
 
-    # median == 0 guard: without it, any nonzero month would be treated as
-    # "more than 2x zero" and get trimmed as an outlier whenever two of the
-    # three months have no spending in this category-tag -- which is a
-    # normal cold-data pattern, not an outlier.
+    # median == 0 guard: this is defense-in-depth, not a path that fires in
+    # the app's normal flow. Both call sites gate on is_eligible_for_suggestion
+    # first, which requires all 3 monthly totals > 0, so median can never be
+    # exactly 0 when this function is actually invoked in production. Without
+    # the guard, a call with a total of exactly 0.00 would treat any nonzero
+    # month as "more than 2x zero" and wrongly trim it as an outlier.
     if median > 0 and highest > median * _OUTLIER_MULTIPLIER:
         if highest == oldest:
             remaining_newer, remaining_older = newest, middle

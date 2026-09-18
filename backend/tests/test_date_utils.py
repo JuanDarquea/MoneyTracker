@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.services.date_utils import month_bounds
+from app.services.date_utils import month_bounds, three_preceding_months
 
 
 def test_month_bounds_returns_first_and_last_day():
@@ -13,3 +13,21 @@ def test_month_bounds_handles_31_day_month():
     start, end = month_bounds("2026-01")
     assert start == date(2026, 1, 1)
     assert end == date(2026, 1, 31)
+
+
+def test_three_preceding_months_returns_oldest_first():
+    bounds = three_preceding_months(date(2026, 9, 17))
+    assert bounds == [
+        (date(2026, 6, 1), date(2026, 6, 30)),
+        (date(2026, 7, 1), date(2026, 7, 31)),
+        (date(2026, 8, 1), date(2026, 8, 31)),
+    ]
+
+
+def test_three_preceding_months_crosses_year_boundary():
+    bounds = three_preceding_months(date(2026, 2, 10))
+    assert bounds == [
+        (date(2025, 11, 1), date(2025, 11, 30)),
+        (date(2025, 12, 1), date(2025, 12, 31)),
+        (date(2026, 1, 1), date(2026, 1, 31)),
+    ]

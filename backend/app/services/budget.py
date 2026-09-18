@@ -1,4 +1,3 @@
-import calendar
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -10,7 +9,7 @@ from app.models import Budget, BudgetSource, CategoryType, IncomeTarget, Transac
 from app.schemas.budget import BudgetLineRead, BudgetLineSet, BudgetState, IncomeTargetSet, SuggestionItem
 from app.services import categories as categories_service
 from app.services.budget_engine import compute_suggested_amount
-from app.services.date_utils import month_bounds
+from app.services.date_utils import month_bounds, three_preceding_months
 
 
 def get_income_target(db: Session, user_id: uuid.UUID) -> IncomeTarget | None:
@@ -59,28 +58,16 @@ def set_budget_line(db: Session, user_id: uuid.UUID, payload: BudgetLineSet) -> 
     return line
 
 
-def _three_preceding_months(today: date) -> list[tuple[date, date]]:
-    """Return (start, end) bounds for the 3 calendar months before `today`'s month, oldest first."""
-    bounds = []
-    year, month = today.year, today.month
-    for _ in range(3):
-        month -= 1
-        if month == 0:
-            month, year = 12, year - 1
-        last_day = calendar.monthrange(year, month)[1]
-        bounds.append((date(year, month, 1), date(year, month, last_day)))
-    return list(reversed(bounds))
-
-
 def _monthly_totals_for_line(
     db: Session, user_id: uuid.UUID, category_id: uuid.UUID, is_essential: bool, today: date
 ) -> list[Decimal]:
     totals = []
-    for start, end in _three_preceding_months(today):
+    for start, end in three_preceding_months(today):
         stmt = select(func.sum(Transaction.amount)).where(
             Transaction.user_id == user_id,
             Transaction.category_id == category_id,
             Transaction.is_essential == is_essential,
+            Transaction.type == TransactionType.EXPENSE,
             Transaction.occurred_on >= start,
             Transaction.occurred_on <= end,
         )
@@ -167,6 +154,9 @@ def get_budget_state(db: Session, user_id: uuid.UUID, month: str) -> BudgetState
 
     # Every (category_id, is_essential) pair with a saved budget or any
     # transaction history (any month, not just the requested one) is shown.
+    # Keyed by (category_id, is_essential); the uq_budgets_user_category_essential
+    # DB constraint guarantees at most one Budget row per key, so this dict
+    # construction can't silently drop or overwrite a row.
     budget_rows = {
         (row.category_id, row.is_essential): row for row in db.scalars(select(Budget).where(Budget.user_id == user_id))
     }
@@ -203,6 +193,7 @@ def get_budget_state(db: Session, user_id: uuid.UUID, month: str) -> BudgetState
                 Transaction.user_id == user_id,
                 Transaction.category_id == category_id,
                 Transaction.is_essential == is_essential,
+                Transaction.type == TransactionType.EXPENSE,
                 Transaction.occurred_on >= start,
                 Transaction.occurred_on <= end,
             )
@@ -217,6 +208,7 @@ def get_budget_state(db: Session, user_id: uuid.UUID, month: str) -> BudgetState
                 source=source,
                 eligible_for_suggestion=eligible,
                 actual_this_month=actual_this_month,
+                is_archived=category.is_archived,
             )
         )
 
@@ -237,7 +229,21 @@ def get_budget_state(db: Session, user_id: uuid.UUID, month: str) -> BudgetState
         if income_target_amount is not None
         else None
     )
-    actual_net_so_far = actual_income_this_month - essentials_actual_total - discretionary_actual_total
+
+    # actual_net_so_far mirrors summary.py's `net` (income - ALL expenses this
+    # month), not essentials_actual_total + discretionary_actual_total: those
+    # two totals only cover transactions tagged with is_essential, so a
+    # pre-M3/backfilled transaction with is_essential = NULL would otherwise
+    # silently vanish from the headline net figure.
+    total_actual_expense_this_month = db.scalar(
+        select(func.sum(Transaction.amount)).where(
+            Transaction.user_id == user_id,
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.occurred_on >= start,
+            Transaction.occurred_on <= end,
+        )
+    ) or Decimal("0.00")
+    actual_net_so_far = actual_income_this_month - total_actual_expense_this_month
 
     return BudgetState(
         income_target=income_target_amount,
